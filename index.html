@@ -22,15 +22,8 @@
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; user-select: none; }
         
-        /* IPHONE FIX: Use 100dvh instead of 100vh so it resizes with Safari's address bar */
-        body { 
-            background-color: #333; 
-            display: flex; 
-            justify-content: center; 
-            height: 100vh; /* Fallback for older browsers */
-            height: 100dvh; /* Dynamic height for modern Safari */
-            overflow: hidden; 
-        }
+        /* Dynamic viewport height for Safari */
+        body { background-color: #333; display: flex; justify-content: center; height: 100vh; height: 100dvh; overflow: hidden; }
         
         .app-container { width: 100%; max-width: 450px; background: var(--bg-color); height: 100%; display: flex; flex-direction: column; position: relative; overflow: hidden; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
 
@@ -45,7 +38,7 @@
         .screen { display: none; flex-direction: column; height: 100%; width: 100%; position: absolute; top: 0; left: 0; background: var(--bg-color); z-index: 1; overflow-y: auto; }
         .screen.active { display: flex; }
 
-        /* IPHONE FIX: Add top padding for the iPhone Notch (safe-area-inset-top) */
+        /* Headers with safe area inset */
         .top-header { background: var(--primary); color: white; padding: max(25px, env(safe-area-inset-top)) 20px 25px; border-radius: 0 0 25px 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 10; }
         .top-header h1 { font-size: 1.5rem; display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
         .top-header p { font-size: 0.9rem; opacity: 0.9; }
@@ -67,7 +60,6 @@
         .nav-card .title { font-weight: 600; color: var(--text-dark); }
 
         /* Billing UI */
-        /* IPHONE FIX: Extra bottom padding to account for the Home bar */
         .item-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 20px; padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
         .item-card { background: var(--card-bg); border-radius: var(--radius); padding: 10px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between; }
         .item-card .img-container { width: 100%; height: 90px; background: #f1f2f6; border-radius: 10px; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; font-size: 2rem; overflow: hidden; }
@@ -79,7 +71,6 @@
         .qty-controls { display: flex; justify-content: space-between; align-items: center; background: var(--bg-color); border-radius: 20px; padding: 5px; }
         .qty-btn { background: rgba(0,0,0,0.05); border: none; width: 30px; height: 30px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; color: var(--primary); font-weight: bold; display: flex; align-items: center; justify-content: center; }
         
-        /* IPHONE FIX: Add bottom padding for the iPhone swipe bar (safe-area-inset-bottom) */
         .bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; max-width: 450px; background: white; padding: 15px 20px max(15px, env(safe-area-inset-bottom)); box-shadow: 0 -4px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; z-index: 10; }
         .btn-clear-cart { border: 1px solid var(--primary); color: var(--primary); background: transparent; padding: 12px 20px; border-radius: 12px; font-weight: bold; cursor: pointer; }
         .total-display { text-align: center; }
@@ -98,10 +89,10 @@
         .history-list { padding: 0 20px calc(100px + env(safe-area-inset-bottom)); }
         .history-card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
         
-        /* IPHONE FIX: Export buttons need safe area padding */
-        .export-btns { position: fixed; bottom: 0; width: 100%; max-width: 450px; background: white; padding: 15px 15px max(15px, env(safe-area-inset-bottom)); box-shadow: 0 -4px 10px rgba(0,0,0,0.1); display: flex; gap: 10px; z-index: 10; }
-        .btn-export { flex: 1; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 1rem; }
-        .btn-export.excel { background: #217346; } /* Excel Green */
+        .export-btns { position: fixed; bottom: 0; width: 100%; max-width: 450px; background: white; padding: 10px 10px max(10px, env(safe-area-inset-bottom)); box-shadow: 0 -4px 10px rgba(0,0,0,0.1); display: flex; gap: 8px; z-index: 10; }
+        .btn-export { flex: 1; color: #fff; border: none; padding: 12px 5px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 0.9rem; text-align: center; }
+        .btn-export.csv { background: #34495e; }
+        .btn-export.excel { background: #217346; }
         .btn-export.pdf { background: var(--primary); }
 
         /* Settings Forms */
@@ -120,7 +111,6 @@
         .modal-card { background: white; padding: 25px; border-radius: var(--radius); width: 100%; text-align: center; }
         .pin-input { font-size: 2rem; letter-spacing: 10px; text-align: center; width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 10px; margin: 20px 0; }
         
-        /* IPHONE FIX: Add bottom padding to Settings screen to ensure scrolling past the notch */
         #screen-settings { padding-bottom: calc(40px + env(safe-area-inset-bottom)); }
     </style>
 </head>
@@ -192,7 +182,7 @@
 
     <div id="screen-payment" class="screen">
         <div class="sub-header">
-            <button class="back-btn" onclick="openScreen('screen-bill')">←</button>
+            <button class="back-btn" onclick="openScreen('screen-dashboard')">←</button>
             <h2 style="font-size: 1.2rem;">Payment</h2>
         </div>
         
@@ -231,6 +221,7 @@
             </div>
 
         <div class="export-btns">
+            <button class="btn-export csv" onclick="downloadCSV()">⬇ CSV</button>
             <button class="btn-export excel" onclick="downloadExcel()">⬇ Excel</button>
             <button class="btn-export pdf" onclick="downloadPDF()">⬇ PDF</button>
         </div>
@@ -512,7 +503,26 @@
         document.getElementById('rep-month-count').innerText = mCount;
     }
 
-    // --- EXCEL & PDF Exports ---
+    // --- CSV, EXCEL & PDF Exports ---
+    
+    function downloadCSV() {
+        if(bills.length === 0) return alert("No data to export.");
+        let csv = "Date,Time,Items Sold,Total Amount (INR)\n";
+        bills.forEach(b => {
+            const d = new Date(b.date);
+            // Escape any quotes in the summary text to keep CSV formatting intact
+            const safeSummary = b.summary.replace(/"/g, '""');
+            csv += `"${d.toLocaleDateString()}","${d.toLocaleTimeString()}","${safeSummary}",${b.total}\n`;
+        });
+        
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Sakthi_Bakery_Sales_${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+    }
+
     function downloadExcel() {
         if(bills.length === 0) return alert("No data to export.");
         
