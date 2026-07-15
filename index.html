@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sakthi Bakery POS</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary: #c0392b;      /* Deep bakery red */
+            --primary-light: #e74c3c;
+            --bg-color: #fdf5e6;     /* Warm cream */
+            --card-bg: #ffffff;
+            --text-dark: #2d3436;
+            --text-muted: #636e72;
+            --success: #27ae60;      
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --radius: 16px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; user-select: none; }
+        
+        body { background-color: #333; display: flex; justify-content: center; height: 100vh; overflow: hidden; }
+        
+        .app-container { width: 100%; max-width: 450px; background: var(--bg-color); height: 100%; display: flex; flex-direction: column; position: relative; overflow: hidden; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+
+        /* Startup Login Screen */
+        #startup-login { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--primary); z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; padding: 20px; text-align: center; }
+        #startup-login h1 { font-size: 2.5rem; margin-bottom: 10px; }
+        #startup-login p { margin-bottom: 30px; opacity: 0.9; }
+        .startup-pin-input { font-size: 2.5rem; letter-spacing: 15px; text-align: center; width: 80%; max-width: 300px; padding: 15px; border: none; border-radius: 12px; margin-bottom: 20px; outline: none; color: var(--text-dark); box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .btn-unlock { background: var(--success); color: white; border: none; padding: 15px 40px; border-radius: 12px; font-size: 1.2rem; font-weight: bold; cursor: pointer; width: 80%; max-width: 300px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+
+        /* Screens */
+        .screen { display: none; flex-direction: column; height: 100%; width: 100%; position: absolute; top: 0; left: 0; background: var(--bg-color); z-index: 1; overflow-y: auto; }
+        .screen.active { display: flex; }
+
+        /* Headers */
+        .top-header { background: var(--primary); color: white; padding: 25px 20px; border-radius: 0 0 25px 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 10; }
+        .top-header h1 { font-size: 1.5rem; display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
+        .top-header p { font-size: 0.9rem; opacity: 0.9; }
+        
+        .sub-header { background: var(--primary); color: white; padding: 15px 20px; display: flex; align-items: center; gap: 15px; position: sticky; top: 0; z-index: 10; }
+        .back-btn { background: rgba(255,255,255,0.2); border: none; color: white; width: 35px; height: 35px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; display: flex; justify-content: center; align-items: center; }
+
+        /* Dashboard UI */
+        .sales-card { background: var(--card-bg); margin: -15px 20px 20px; padding: 20px; border-radius: var(--radius); box-shadow: 0 4px 6px rgba(0,0,0,0.05); position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: center; }
+        .sales-info h3 { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 5px; }
+        .sales-info .amount { font-size: 2rem; color: var(--success); font-weight: bold; }
+        .sales-info .bills { font-size: 0.9rem; color: var(--text-muted); }
+        .money-bag { font-size: 3rem; }
+
+        .nav-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 0 20px 20px; }
+        .nav-card { background: var(--card-bg); padding: 25px 10px; border-radius: var(--radius); text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); cursor: pointer; transition: transform 0.1s; }
+        .nav-card:active { transform: scale(0.95); }
+        .nav-card .icon { font-size: 2.5rem; margin-bottom: 10px; }
+        .nav-card .title { font-weight: 600; color: var(--text-dark); }
+
+        /* Billing UI */
+        .item-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 20px; padding-bottom: 100px; }
+        .item-card { background: var(--card-bg); border-radius: var(--radius); padding: 10px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between; }
+        .item-card .img-container { width: 100%; height: 90px; background: #f1f2f6; border-radius: 10px; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; font-size: 2rem; overflow: hidden; }
+        .item-card img { width: 100%; height: 100%; object-fit: cover; }
+        .item-card .name { font-weight: 600; font-size: 0.95rem; margin-bottom: 5px; line-height: 1.2; }
+        .item-card .price { color: var(--primary); font-weight: bold; margin-bottom: 10px; }
+        
+        .add-btn { background: var(--primary); color: white; border: none; padding: 8px; border-radius: 20px; font-weight: bold; width: 100%; cursor: pointer; }
+        .qty-controls { display: flex; justify-content: space-between; align-items: center; background: var(--bg-color); border-radius: 20px; padding: 5px; }
+        .qty-btn { background: rgba(0,0,0,0.05); border: none; width: 30px; height: 30px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; color: var(--primary); font-weight: bold; display: flex; align-items: center; justify-content: center; }
+        
+        /* Bottom Action Bar */
+        .bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; max-width: 450px; background: white; padding: 15px 20px; box-shadow: 0 -4px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; z-index: 10; }
+        .btn-clear-cart { border: 1px solid var(--primary); color: var(--primary); background: transparent; padding: 12px 20px; border-radius: 12px; font-weight: bold; cursor: pointer; }
+        .total-display { text-align: center; }
+        .total-display .label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; }
+        .total-display .val { font-size: 1.5rem; font-weight: bold; color: var(--text-dark); }
+        .btn-pay { background: var(--success); color: white; border: none; padding: 12px 30px; border-radius: 12px; font-weight: bold; font-size: 1.1rem; cursor: pointer; }
+
+        /* Payment UI */
+        .payment-content { display: flex; flex-direction: column; align-items: center; padding: 30px 20px; flex: 1; }
+        .qr-box { background: white; padding: 15px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin: 30px 0; width: 100%; max-width: 300px; text-align: center; }
+        .qr-box img { width: 100%; border-radius: 10px; }
+        .btn-received { background: var(--success); color: white; border: none; padding: 15px; width: 100%; border-radius: 12px; font-size: 1.2rem; font-weight: bold; margin-top: auto; cursor: pointer; }
+
+        /* Reports UI */
+        .report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 20px; }
+        .history-list { padding: 0 20px 100px; }
+        .history-card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
+        .export-btns { position: fixed; bottom: 0; width: 100%; max-width: 450px; background: white; padding: 15px; box-shadow: 0 -4px 10px rgba(0,0,0,0.1); display: flex; gap: 10px; z-index: 10; }
+        .btn-export { flex: 1; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 1rem; }
+        .btn-export.excel { background: #217346; } /* Excel Green */
+        .btn-export.pdf { background: var(--primary); }
+
+        /* Settings Forms */
+        .form-input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 15px; font-size: 1rem; }
+        .btn-full { width: 100%; padding: 12px; border-radius: 8px; font-size: 1.1rem; font-weight: bold; border: none; color: white; cursor: pointer; }
+        .btn-danger { background: var(--danger); color: white; border: 1px solid var(--danger); }
+        .btn-outline-danger { background: transparent; color: var(--danger); border: 2px solid var(--danger); }
+
+        /* Manage Items */
+        .manage-list { padding: 20px; }
+        .manage-item { display: flex; justify-content: space-between; align-items: center; background: white; padding: 10px; border-radius: 12px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .manage-img { width: 50px; height: 50px; border-radius: 8px; object-fit: cover; background: #eee; display: flex; align-items: center; justify-content: center; }
+
+        /* Action PIN Modal */
+        .modal-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; display: none; justify-content: center; align-items: center; padding: 20px; }
+        .modal-card { background: white; padding: 25px; border-radius: var(--radius); width: 100%; text-align: center; }
+        .pin-input { font-size: 2rem; letter-spacing: 10px; text-align: center; width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 10px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+
+    <div id="startup-login">
+        <h1>🧁 Sakthi Bakery</h1>
+        <p>POS System Locked</p>
+        <input type="password" id="startup-pin-entry" class="startup-pin-input" inputmode="numeric" maxlength="4" placeholder="****">
+        <button class="btn-unlock" onclick="unlockApp()">Unlock System</button>
+        <p style="margin-top: 20px; font-size: 0.9rem;">Default PIN is 1234</p>
+    </div>
+
+    <div id="screen-dashboard" class="screen active">
+        <div class="top-header">
+            <h1>🧁 Sakthi Bakery</h1>
+            <p>Fresh Bakes & Hot Snacks</p>
+        </div>
+        
+        <div class="sales-card">
+            <div class="sales-info">
+                <h3>Today's Sales</h3>
+                <div class="amount">₹<span id="dash-today-sales">0</span></div>
+                <div class="bills"><span id="dash-today-bills">0</span> bills</div>
+            </div>
+            <div class="money-bag">💰</div>
+        </div>
+
+        <div class="nav-grid">
+            <div class="nav-card" onclick="openScreen('screen-bill')">
+                <div class="icon">🧾</div>
+                <div class="title">Bill Now</div>
+            </div>
+            <div class="nav-card" onclick="openScreen('screen-reports')">
+                <div class="icon">📊</div>
+                <div class="title">Reports</div>
+            </div>
+            <div class="nav-card" onclick="promptPin('manage')">
+                <div class="icon">🍩</div>
+                <div class="title">Manage Items</div>
+            </div>
+            <div class="nav-card" onclick="promptPin('settings')">
+                <div class="icon">⚙️</div>
+                <div class="title">Settings</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-bill" class="screen">
+        <div class="sub-header">
+            <button class="back-btn" onclick="openScreen('screen-dashboard')">←</button>
+            <h2 style="font-size: 1.2rem;">Bill Now</h2>
+        </div>
+        
+        <div class="item-grid" id="bill-grid">
+            </div>
+
+        <div class="bottom-bar">
+            <button class="btn-clear-cart" onclick="clearCart()">Clear</button>
+            <div class="total-display">
+                <div class="label">TOTAL</div>
+                <div class="val">₹<span id="bill-total">0</span></div>
+            </div>
+            <button class="btn-pay" onclick="goToPayment()">Pay Now</button>
+        </div>
+    </div>
+
+    <div id="screen-payment" class="screen">
+        <div class="sub-header">
+            <button class="back-btn" onclick="openScreen('screen-bill')">←</button>
+            <h2 style="font-size: 1.2rem;">Payment</h2>
+        </div>
+        
+        <div class="payment-content">
+            <div style="color: var(--text-muted); font-weight: bold; text-transform: uppercase; margin-bottom: 5px;">Amount to Collect</div>
+            <div style="font-size: 3rem; font-weight: bold; color: var(--primary);">₹<span id="pay-amount">0</span></div>
+            
+            <div class="qr-box" id="qr-display">
+                </div>
+
+            <button class="btn-received" onclick="confirmPayment()">✅ Payment Received</button>
+        </div>
+    </div>
+
+    <div id="screen-reports" class="screen">
+        <div class="sub-header">
+            <button class="back-btn" onclick="openScreen('screen-dashboard')">←</button>
+            <h2 style="font-size: 1.2rem;">Reports</h2>
+        </div>
+
+        <div class="report-grid">
+            <div class="sales-card" style="margin:0; padding:15px; display:block;">
+                <div style="font-size:0.8rem; color:var(--text-muted);">TODAY</div>
+                <div style="font-size:1.5rem; color:var(--success); font-weight:bold;">₹<span id="rep-today-amt">0</span></div>
+                <div style="font-size:0.8rem; color:var(--text-muted);"><span id="rep-today-count">0</span> bill</div>
+            </div>
+            <div class="sales-card" style="margin:0; padding:15px; display:block;">
+                <div style="font-size:0.8rem; color:var(--text-muted);">THIS MONTH</div>
+                <div style="font-size:1.5rem; color:var(--success); font-weight:bold;">₹<span id="rep-month-amt">0</span></div>
+                <div style="font-size:0.8rem; color:var(--text-muted);"><span id="rep-month-count">0</span> bill</div>
+            </div>
+        </div>
+
+        <h3 style="padding: 0 20px 10px; color: var(--text-muted); font-size: 1rem;">Bill History</h3>
+        <div class="history-list" id="history-container">
+            </div>
+
+        <div class="export-btns">
+            <button class="btn-export excel" onclick="downloadExcel()">⬇ Excel</button>
+            <button class="btn-export pdf" onclick="downloadPDF()">⬇ PDF</button>
+        </div>
+    </div>
+
+    <div id="screen-manage" class="screen">
+        <div class="sub-header">
+            <button class="back-btn" onclick="openScreen('screen-dashboard')">←</button>
+            <h2 style="font-size: 1.2rem;">Manage Items</h2>
+        </div>
+        
+        <div style="padding: 20px;">
+            <div style="background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                <h3 style="margin-bottom: 15px;">Add New Product</h3>
+                
+                <label style="font-size:0.9rem; color:var(--text-muted); margin-bottom:5px; display:block;">Item Name</label>
+                <input type="text" id="add-name" class="form-input" placeholder="e.g. Bread, Cake">
+                
+                <label style="font-size:0.9rem; color:var(--text-muted); margin-bottom:5px; display:block;">Price (₹)</label>
+                <input type="number" id="add-price" class="form-input" placeholder="Price">
+                
+                <label style="font-size:0.9rem; color:var(--text-muted); margin-bottom:5px; display:block;">Photo (Camera / Gallery)</label>
+                <input type="file" id="add-photo" accept="image/*" class="form-input">
+                
+                <button class="btn-full" style="background: var(--success);" onclick="addItem()">+ Add Item</button>
+            </div>
+        </div>
+
+        <h3 style="padding: 0 20px; color: var(--text-muted); font-size: 1rem;">Current Items</h3>
+        <div class="manage-list" id="manage-container">
+            </div>
+    </div>
+
+    <div id="screen-settings" class="screen">
+        <div class="sub-header">
+            <button class="back-btn" onclick="openScreen('screen-dashboard')">←</button>
+            <h2 style="font-size: 1.2rem;">Settings</h2>
+        </div>
+        
+        <div style="padding: 20px;">
+            <div style="background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                <h3 style="margin-bottom: 10px;">Update QR Code</h3>
+                <input type="file" id="qr-upload" accept="image/*" class="form-input">
+                <button class="btn-full" style="background: var(--primary);" onclick="saveQR()">Save QR</button>
+            </div>
+
+            <div style="background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                <h3 style="margin-bottom: 10px;">Change Security PIN</h3>
+                <input type="text" id="new-pin" class="form-input" placeholder="Enter new 4-digit PIN" maxlength="4" inputmode="numeric">
+                <button class="btn-full" style="background: var(--primary);" onclick="updatePin()">Update PIN</button>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 10px;">Default PIN is 1234.</p>
+            </div>
+
+            <div style="background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 40px;">
+                <h3 style="margin-bottom: 10px; color: var(--danger);">Danger Zone</h3>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Clear all past bills and sales data. This action cannot be reversed.</p>
+                <button class="btn-full btn-outline-danger" onclick="requestClearData()">🗑️ Clear All Sales Data</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="pin-modal">
+        <div class="modal-card">
+            <h2>Enter PIN</h2>
+            <input type="password" id="pin-entry" class="pin-input" inputmode="numeric" maxlength="4" placeholder="****">
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-full" style="background: #e5e7eb; color: var(--text-dark);" onclick="closePinModal()">Cancel</button>
+                <button class="btn-full" style="background: var(--primary);" onclick="verifyPin()">Unlock</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // --- State Management ---
+    let defaultItems = [
+        { id: 1, name: "Tea", price: 15, photo: "" },
+        { id: 2, name: "Filter Coffee", price: 20, photo: "" },
+        { id: 3, name: "Bread Packet", price: 40, photo: "" },
+        { id: 4, name: "Veg Puff", price: 20, photo: "" }
+    ];
+
+    let items = JSON.parse(localStorage.getItem('sakthi_items')) || defaultItems;
+    let bills = JSON.parse(localStorage.getItem('sakthi_bills')) || [];
+    let appPin = localStorage.getItem('sakthi_pin') || '1234';
+    let savedQR = localStorage.getItem('sakthi_qr') || '';
+    
+    let cart = {}; 
+    let currentTotal = 0;
+    let targetScreenAfterPin = '';
+
+    // --- Startup Login System ---
+    function unlockApp() {
+        const enteredPin = document.getElementById('startup-pin-entry').value;
+        if(enteredPin === appPin) {
+            document.getElementById('startup-login').style.display = 'none';
+            // Also listen for enter key on startup pin
+        } else {
+            alert("Incorrect PIN. Please try again.");
+            document.getElementById('startup-pin-entry').value = '';
+        }
+    }
+
+    // Allow pressing "Enter" on the keyboard to unlock the startup screen
+    document.getElementById('startup-pin-entry').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            unlockApp();
+        }
+    });
+
+    // --- Navigation ---
+    function openScreen(screenId) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(screenId).classList.add('active');
+        if(screenId === 'screen-dashboard') updateDashboard();
+        if(screenId === 'screen-bill') renderBillGrid();
+        if(screenId === 'screen-reports') renderReports();
+        if(screenId === 'screen-manage') renderManageGrid();
+    }
+
+    // --- Image Compression Tool ---
+    function compressImage(file, callback) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const MAX_SIZE = 300; 
+                let width = img.width;
+                let height = img.height;
+                
+                if (width > height && width > MAX_SIZE) {
+                    height *= MAX_SIZE / width; width = MAX_SIZE;
+                } else if (height > MAX_SIZE) {
+                    width *= MAX_SIZE / height; height = MAX_SIZE;
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                callback(canvas.toDataURL('image/jpeg', 0.6));
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // --- Core Logic: Billing ---
+    function renderBillGrid() {
+        const grid = document.getElementById('bill-grid');
+        grid.innerHTML = '';
+        currentTotal = 0;
+
+        items.forEach(item => {
+            const qty = cart[item.id] || 0;
+            currentTotal += (qty * item.price);
+            
+            let btnHTML = qty > 0 
+                ? `<div class="qty-controls">
+                    <button class="qty-btn" onclick="updateQty(${item.id}, -1)">-</button>
+                    <span style="font-weight:bold;">${qty}</span>
+                    <button class="qty-btn" onclick="updateQty(${item.id}, 1)">+</button>
+                   </div>`
+                : `<button class="add-btn" onclick="updateQty(${item.id}, 1)">Add</button>`;
+
+            let imgHTML = item.photo 
+                ? `<img src="${item.photo}" alt="${item.name}">` 
+                : `🍞`;
+
+            grid.innerHTML += `
+                <div class="item-card">
+                    <div>
+                        <div class="img-container">${imgHTML}</div>
+                        <div class="name">${item.name}</div>
+                        <div class="price">₹${item.price}</div>
+                    </div>
+                    ${btnHTML}
+                </div>
+            `;
+        });
+        document.getElementById('bill-total').innerText = currentTotal;
+    }
+
+    function updateQty(id, change) {
+        if (!cart[id]) cart[id] = 0;
+        cart[id] += change;
+        if (cart[id] <= 0) delete cart[id];
+        renderBillGrid();
+    }
+
+    function clearCart() {
+        cart = {};
+        renderBillGrid();
+    }
+
+    // --- Payment Flow ---
+    function goToPayment() {
+        if(currentTotal === 0) return alert("Please add items to bill.");
+        document.getElementById('pay-amount').innerText = currentTotal;
+        
+        const qrBox = document.getElementById('qr-display');
+        if(savedQR) {
+            qrBox.innerHTML = `<img src="${savedQR}" alt="UPI QR">`;
+        } else {
+            qrBox.innerHTML = `<div style="padding:40px 10px; color:#999; background:#eee; border-radius:10px;">QR Not Uploaded.<br>Upload in Settings.</div>`;
+        }
+        openScreen('screen-payment');
+    }
+
+    function confirmPayment() {
+        let summaryText = [];
+        for (const [id, qty] of Object.entries(cart)) {
+            const item = items.find(i => i.id == id);
+            summaryText.push(`${item.name} x${qty}`);
+        }
+        
+        const newBill = {
+            id: Date.now(),
+            date: new Date().toISOString(),
+            summary: summaryText.join(', '),
+            total: currentTotal
+        };
+
+        bills.push(newBill);
+        localStorage.setItem('sakthi_bills', JSON.stringify(bills));
+        
+        clearCart();
+        openScreen('screen-dashboard');
+    }
+
+    // --- Dashboard & Reports ---
+    function updateDashboard() {
+        const today = new Date().toDateString();
+        let todayTotal = 0, todayCount = 0;
+        
+        bills.forEach(bill => {
+            if(new Date(bill.date).toDateString() === today) {
+                todayTotal += bill.total;
+                todayCount++;
+            }
+        });
+
+        document.getElementById('dash-today-sales').innerText = todayTotal;
+        document.getElementById('dash-today-bills').innerText = todayCount;
+    }
+
+    function renderReports() {
+        const todayStr = new Date().toDateString();
+        const currentMonth = new Date().getMonth();
+        const currentYear = new Date().getFullYear();
+        
+        let tAmt = 0, tCount = 0, mAmt = 0, mCount = 0;
+        const container = document.getElementById('history-container');
+        container.innerHTML = '';
+
+        const sortedBills = [...bills].sort((a,b) => b.id - a.id);
+
+        sortedBills.forEach(bill => {
+            const d = new Date(bill.date);
+            if(d.toDateString() === todayStr) { tAmt += bill.total; tCount++; }
+            if(d.getMonth() === currentMonth && d.getFullYear() === currentYear) { mAmt += bill.total; mCount++; }
+
+            const dateFmt = `${d.getDate()} ${d.toLocaleString('default', { month: 'short' })} • ${d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+            
+            container.innerHTML += `
+                <div class="history-card">
+                    <div style="flex:1;">
+                        <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:5px;">${dateFmt}</div>
+                        <div style="font-size:0.9rem;">${bill.summary}</div>
+                    </div>
+                    <div style="font-weight:bold; color:var(--primary); font-size:1.1rem;">₹${bill.total}</div>
+                </div>
+            `;
+        });
+
+        document.getElementById('rep-today-amt').innerText = tAmt;
+        document.getElementById('rep-today-count').innerText = tCount;
+        document.getElementById('rep-month-amt').innerText = mAmt;
+        document.getElementById('rep-month-count').innerText = mCount;
+    }
+
+    // --- EXCEL & PDF Exports ---
+    function downloadExcel() {
+        if(bills.length === 0) return alert("No data to export.");
+        
+        const exportData = bills.map(b => {
+            const d = new Date(b.date);
+            return {
+                "Date": d.toLocaleDateString(),
+                "Time": d.toLocaleTimeString(),
+                "Items Sold": b.summary,
+                "Total Amount (INR)": b.total
+            };
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(exportData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Sales Report");
+        XLSX.writeFile(workbook, `Sakthi_Bakery_Sales_${new Date().toISOString().split('T')[0]}.xlsx`);
+    }
+
+    function downloadPDF() {
+        if(bills.length === 0) return alert("No data to export.");
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        doc.setFontSize(20);
+        doc.text("Sakthi Bakery - Sales Report", 10, 20);
+        doc.setFontSize(12);
+        
+        let y = 35;
+        bills.forEach((b) => {
+            const d = new Date(b.date);
+            const line = `${d.toLocaleDateString()} ${d.toLocaleTimeString()} - Rs.${b.total} - ${b.summary}`;
+            const splitText = doc.splitTextToSize(line, 190);
+            doc.text(splitText, 10, y);
+            y += (splitText.length * 7) + 3;
+            if (y >= 280) { doc.addPage(); y = 20; }
+        });
+        
+        doc.save(`Sakthi_Bakery_Sales_${new Date().toISOString().split('T')[0]}.pdf`);
+    }
+
+    // --- Security PIN & Clear Data ---
+    function promptPin(target) {
+        targetScreenAfterPin = target;
+        document.getElementById('pin-entry').value = '';
+        document.getElementById('pin-modal').style.display = 'flex';
+        document.getElementById('pin-entry').focus();
+    }
+
+    function closePinModal() {
+        document.getElementById('pin-modal').style.display = 'none';
+    }
+
+    function verifyPin() {
+        const entry = document.getElementById('pin-entry').value;
+        if(entry === appPin) {
+            closePinModal();
+            if(targetScreenAfterPin === 'manage') openScreen('screen-manage');
+            else if(targetScreenAfterPin === 'settings') openScreen('screen-settings');
+            else if(targetScreenAfterPin === 'clear_data') executeClearData();
+        } else {
+            alert("Incorrect PIN");
+        }
+    }
+
+    function updatePin() {
+        const newPin = document.getElementById('new-pin').value;
+        if(newPin.length >= 4) {
+            appPin = newPin;
+            localStorage.setItem('sakthi_pin', appPin);
+            alert("PIN Updated Successfully!");
+            document.getElementById('new-pin').value = '';
+        } else {
+            alert("Enter at least 4 digits.");
+        }
+    }
+
+    function requestClearData() {
+        if(confirm("Are you sure you want to delete ALL sales reports? This CANNOT be undone.")) {
+            promptPin('clear_data'); 
+        }
+    }
+
+    function executeClearData() {
+        bills = [];
+        localStorage.removeItem('sakthi_bills');
+        updateDashboard();
+        alert("All sales data has been successfully cleared.");
+    }
+
+    // --- Settings & Manage UI ---
+    function saveQR() {
+        const file = document.getElementById('qr-upload').files[0];
+        if(!file) return alert("Select an image first.");
+        
+        compressImage(file, function(compressedImg) {
+            savedQR = compressedImg;
+            localStorage.setItem('sakthi_qr', savedQR);
+            alert("QR Code Saved Successfully!");
+            document.getElementById('qr-upload').value = '';
+        });
+    }
+
+    function renderManageGrid() {
+        const container = document.getElementById('manage-container');
+        container.innerHTML = '';
+        items.forEach(item => {
+            const imgHTML = item.photo ? `<img src="${item.photo}" class="manage-img">` : `<div class="manage-img">🍞</div>`;
+            container.innerHTML += `
+                <div class="manage-item">
+                    <div style="display:flex; align-items:center; gap:15px;">
+                        ${imgHTML}
+                        <div>
+                            <div style="font-weight:bold; font-size:1.1rem;">${item.name}</div>
+                            <div style="color:var(--primary); font-weight:bold;">₹${item.price}</div>
+                        </div>
+                    </div>
+                    <button class="btn-danger" style="padding:8px 15px; border-radius:8px; cursor:pointer;" onclick="deleteItem(${item.id})">Del</button>
+                </div>
+            `;
+        });
+    }
+
+    function addItem() {
+        const name = document.getElementById('add-name').value;
+        const price = parseInt(document.getElementById('add-price').value);
+        const fileInput = document.getElementById('add-photo');
+        
+        if(!name || isNaN(price)) return alert("Enter valid name and price");
+
+        const newItem = { id: Date.now(), name, price, photo: "" };
+
+        if(fileInput.files && fileInput.files[0]) {
+            compressImage(fileInput.files[0], function(base64Img) {
+                newItem.photo = base64Img;
+                finalizeAddItem(newItem);
+            });
+        } else {
+            finalizeAddItem(newItem);
+        }
+    }
+
+    function finalizeAddItem(newItem) {
+        items.push(newItem);
+        localStorage.setItem('sakthi_items', JSON.stringify(items));
+        
+        document.getElementById('add-name').value = '';
+        document.getElementById('add-price').value = '';
+        document.getElementById('add-photo').value = '';
+        
+        renderManageGrid();
+        alert("Product Added!");
+    }
+
+    function deleteItem(id) {
+        if(confirm("Delete this product from your shop?")) {
+            items = items.filter(i => i.id !== id);
+            localStorage.setItem('sakthi_items', JSON.stringify(items));
+            renderManageGrid();
+        }
+    }
+
+    // Initialize App Core
+    updateDashboard();
+
+</script>
+</body>
+</html>
