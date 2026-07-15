@@ -2,15 +2,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Sakthi Bakery POS</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
-            --primary: #c0392b;      /* Deep bakery red */
+            --primary: #c0392b;      
             --primary-light: #e74c3c;
-            --bg-color: #fdf5e6;     /* Warm cream */
+            --bg-color: #fdf5e6;     
             --card-bg: #ffffff;
             --text-dark: #2d3436;
             --text-muted: #636e72;
@@ -22,7 +22,15 @@
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; user-select: none; }
         
-        body { background-color: #333; display: flex; justify-content: center; height: 100vh; overflow: hidden; }
+        /* IPHONE FIX: Use 100dvh instead of 100vh so it resizes with Safari's address bar */
+        body { 
+            background-color: #333; 
+            display: flex; 
+            justify-content: center; 
+            height: 100vh; /* Fallback for older browsers */
+            height: 100dvh; /* Dynamic height for modern Safari */
+            overflow: hidden; 
+        }
         
         .app-container { width: 100%; max-width: 450px; background: var(--bg-color); height: 100%; display: flex; flex-direction: column; position: relative; overflow: hidden; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
 
@@ -37,12 +45,12 @@
         .screen { display: none; flex-direction: column; height: 100%; width: 100%; position: absolute; top: 0; left: 0; background: var(--bg-color); z-index: 1; overflow-y: auto; }
         .screen.active { display: flex; }
 
-        /* Headers */
-        .top-header { background: var(--primary); color: white; padding: 25px 20px; border-radius: 0 0 25px 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 10; }
+        /* IPHONE FIX: Add top padding for the iPhone Notch (safe-area-inset-top) */
+        .top-header { background: var(--primary); color: white; padding: max(25px, env(safe-area-inset-top)) 20px 25px; border-radius: 0 0 25px 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 10; }
         .top-header h1 { font-size: 1.5rem; display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
         .top-header p { font-size: 0.9rem; opacity: 0.9; }
         
-        .sub-header { background: var(--primary); color: white; padding: 15px 20px; display: flex; align-items: center; gap: 15px; position: sticky; top: 0; z-index: 10; }
+        .sub-header { background: var(--primary); color: white; padding: max(15px, env(safe-area-inset-top)) 20px 15px; display: flex; align-items: center; gap: 15px; position: sticky; top: 0; z-index: 10; }
         .back-btn { background: rgba(255,255,255,0.2); border: none; color: white; width: 35px; height: 35px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; display: flex; justify-content: center; align-items: center; }
 
         /* Dashboard UI */
@@ -59,7 +67,8 @@
         .nav-card .title { font-weight: 600; color: var(--text-dark); }
 
         /* Billing UI */
-        .item-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 20px; padding-bottom: 100px; }
+        /* IPHONE FIX: Extra bottom padding to account for the Home bar */
+        .item-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 20px; padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
         .item-card { background: var(--card-bg); border-radius: var(--radius); padding: 10px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between; }
         .item-card .img-container { width: 100%; height: 90px; background: #f1f2f6; border-radius: 10px; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; font-size: 2rem; overflow: hidden; }
         .item-card img { width: 100%; height: 100%; object-fit: cover; }
@@ -70,8 +79,8 @@
         .qty-controls { display: flex; justify-content: space-between; align-items: center; background: var(--bg-color); border-radius: 20px; padding: 5px; }
         .qty-btn { background: rgba(0,0,0,0.05); border: none; width: 30px; height: 30px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; color: var(--primary); font-weight: bold; display: flex; align-items: center; justify-content: center; }
         
-        /* Bottom Action Bar */
-        .bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; max-width: 450px; background: white; padding: 15px 20px; box-shadow: 0 -4px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; z-index: 10; }
+        /* IPHONE FIX: Add bottom padding for the iPhone swipe bar (safe-area-inset-bottom) */
+        .bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; max-width: 450px; background: white; padding: 15px 20px max(15px, env(safe-area-inset-bottom)); box-shadow: 0 -4px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; z-index: 10; }
         .btn-clear-cart { border: 1px solid var(--primary); color: var(--primary); background: transparent; padding: 12px 20px; border-radius: 12px; font-weight: bold; cursor: pointer; }
         .total-display { text-align: center; }
         .total-display .label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; }
@@ -79,16 +88,18 @@
         .btn-pay { background: var(--success); color: white; border: none; padding: 12px 30px; border-radius: 12px; font-weight: bold; font-size: 1.1rem; cursor: pointer; }
 
         /* Payment UI */
-        .payment-content { display: flex; flex-direction: column; align-items: center; padding: 30px 20px; flex: 1; }
+        .payment-content { display: flex; flex-direction: column; align-items: center; padding: 30px 20px calc(30px + env(safe-area-inset-bottom)); flex: 1; }
         .qr-box { background: white; padding: 15px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin: 30px 0; width: 100%; max-width: 300px; text-align: center; }
         .qr-box img { width: 100%; border-radius: 10px; }
         .btn-received { background: var(--success); color: white; border: none; padding: 15px; width: 100%; border-radius: 12px; font-size: 1.2rem; font-weight: bold; margin-top: auto; cursor: pointer; }
 
         /* Reports UI */
         .report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 20px; }
-        .history-list { padding: 0 20px 100px; }
+        .history-list { padding: 0 20px calc(100px + env(safe-area-inset-bottom)); }
         .history-card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
-        .export-btns { position: fixed; bottom: 0; width: 100%; max-width: 450px; background: white; padding: 15px; box-shadow: 0 -4px 10px rgba(0,0,0,0.1); display: flex; gap: 10px; z-index: 10; }
+        
+        /* IPHONE FIX: Export buttons need safe area padding */
+        .export-btns { position: fixed; bottom: 0; width: 100%; max-width: 450px; background: white; padding: 15px 15px max(15px, env(safe-area-inset-bottom)); box-shadow: 0 -4px 10px rgba(0,0,0,0.1); display: flex; gap: 10px; z-index: 10; }
         .btn-export { flex: 1; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 1rem; }
         .btn-export.excel { background: #217346; } /* Excel Green */
         .btn-export.pdf { background: var(--primary); }
@@ -100,7 +111,7 @@
         .btn-outline-danger { background: transparent; color: var(--danger); border: 2px solid var(--danger); }
 
         /* Manage Items */
-        .manage-list { padding: 20px; }
+        .manage-list { padding: 20px; padding-bottom: calc(40px + env(safe-area-inset-bottom)); }
         .manage-item { display: flex; justify-content: space-between; align-items: center; background: white; padding: 10px; border-radius: 12px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .manage-img { width: 50px; height: 50px; border-radius: 8px; object-fit: cover; background: #eee; display: flex; align-items: center; justify-content: center; }
 
@@ -108,6 +119,9 @@
         .modal-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; display: none; justify-content: center; align-items: center; padding: 20px; }
         .modal-card { background: white; padding: 25px; border-radius: var(--radius); width: 100%; text-align: center; }
         .pin-input { font-size: 2rem; letter-spacing: 10px; text-align: center; width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 10px; margin: 20px 0; }
+        
+        /* IPHONE FIX: Add bottom padding to Settings screen to ensure scrolling past the notch */
+        #screen-settings { padding-bottom: calc(40px + env(safe-area-inset-bottom)); }
     </style>
 </head>
 <body>
@@ -314,14 +328,12 @@
         const enteredPin = document.getElementById('startup-pin-entry').value;
         if(enteredPin === appPin) {
             document.getElementById('startup-login').style.display = 'none';
-            // Also listen for enter key on startup pin
         } else {
             alert("Incorrect PIN. Please try again.");
             document.getElementById('startup-pin-entry').value = '';
         }
     }
 
-    // Allow pressing "Enter" on the keyboard to unlock the startup screen
     document.getElementById('startup-pin-entry').addEventListener('keypress', function (e) {
         if (e.key === 'Enter') {
             unlockApp();
